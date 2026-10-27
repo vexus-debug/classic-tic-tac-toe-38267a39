@@ -2822,6 +2822,7 @@ export type Database = {
           id: string
           name: string
           opened_count: number
+          parent_campaign_id: string | null
           plain_text: string | null
           preview_text: string | null
           reply_to: string | null
@@ -2853,6 +2854,7 @@ export type Database = {
           id?: string
           name: string
           opened_count?: number
+          parent_campaign_id?: string | null
           plain_text?: string | null
           preview_text?: string | null
           reply_to?: string | null
@@ -2884,6 +2886,7 @@ export type Database = {
           id?: string
           name?: string
           opened_count?: number
+          parent_campaign_id?: string | null
           plain_text?: string | null
           preview_text?: string | null
           reply_to?: string | null
@@ -2897,6 +2900,80 @@ export type Database = {
           unique_clicked_count?: number
           unique_opened_count?: number
           unsubscribed_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_campaigns_parent_campaign_id_fkey"
+            columns: ["parent_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_contacts: {
+        Row: {
+          city: string | null
+          clicks: number
+          clinic_name: string | null
+          created_at: string
+          created_by: string | null
+          email: string
+          emails_sent: number
+          first_name: string | null
+          id: string
+          last_contacted_at: string | null
+          last_engaged_at: string | null
+          last_name: string | null
+          notes: string | null
+          opens: number
+          phone: string | null
+          specialty: string | null
+          status: string
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          city?: string | null
+          clicks?: number
+          clinic_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email: string
+          emails_sent?: number
+          first_name?: string | null
+          id?: string
+          last_contacted_at?: string | null
+          last_engaged_at?: string | null
+          last_name?: string | null
+          notes?: string | null
+          opens?: number
+          phone?: string | null
+          specialty?: string | null
+          status?: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          city?: string | null
+          clicks?: number
+          clinic_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          emails_sent?: number
+          first_name?: string | null
+          id?: string
+          last_contacted_at?: string | null
+          last_engaged_at?: string | null
+          last_name?: string | null
+          notes?: string | null
+          opens?: number
+          phone?: string | null
+          specialty?: string | null
+          status?: string
+          tags?: string[]
           updated_at?: string
         }
         Relationships: []
@@ -2987,6 +3064,7 @@ export type Database = {
           clicked_at: string | null
           clinic_id: string | null
           clinic_name: string | null
+          contact_id: string | null
           created_at: string
           delivered_at: string | null
           error_message: string | null
@@ -3012,6 +3090,7 @@ export type Database = {
           clicked_at?: string | null
           clinic_id?: string | null
           clinic_name?: string | null
+          contact_id?: string | null
           created_at?: string
           delivered_at?: string | null
           error_message?: string | null
@@ -3037,6 +3116,7 @@ export type Database = {
           clicked_at?: string | null
           clinic_id?: string | null
           clinic_name?: string | null
+          contact_id?: string | null
           created_at?: string
           delivered_at?: string | null
           error_message?: string | null
@@ -3068,6 +3148,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_recipients_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_contacts"
             referencedColumns: ["id"]
           },
         ]
