@@ -6408,6 +6408,7 @@ export type Database = {
       }
       get_public_result: { Args: { _serial: string }; Returns: Json }
       get_public_scan: { Args: { _serial: string }; Returns: Json }
+      get_resend_api_key: { Args: never; Returns: string }
       get_staff_id_for_user: {
         Args: { _org_id: string; _user_id: string }
         Returns: string
