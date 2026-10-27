@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Mail, Plus, Send, Pause, Play, Trash2, Copy, Eye, ShieldBan, Monitor, Smartphone, CheckCircle2, XCircle } from "lucide-react";
+import { Mail, Plus, Send, Pause, Play, Trash2, Copy, Eye, ShieldBan, Monitor, Smartphone, CheckCircle2, XCircle, Reply, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,13 +18,32 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "@/hooks/use-toast";
 import { compileEmail } from "@/lib/outreachCompiler";
 import { launchOutreachCampaign, pauseOutreachCampaign, resumeOutreachCampaign, sendOutreachTest } from "@/lib/outreach.functions";
+import OutreachContacts, { CONTACT_STATUSES, SPECIALTIES, contactsQuery, importContacts, toContactRows } from "@/components/admin/OutreachContacts";
 
 type Campaign = {
   id: string; name: string; subject: string; preview_text: string | null; from_name: string; from_email: string;
   reply_to: string | null; html_content: string; plain_text: string | null; track_opens: boolean; track_clicks: boolean;
   status: string; total_recipients: number; sent_count: number; delivered_count: number; unique_opened_count: number;
   unique_clicked_count: number; bounced_count: number; unsubscribed_count: number; failed_count: number; created_at: string;
+  parent_campaign_id?: string | null;
 };
+type AudienceRow = Record<string, string>;
+
+const FOLLOW_UP_RULES = {
+  no_open: { label: "Did not open", test: (r: any) => r.open_count === 0 && r.click_count === 0 },
+  open_no_click: { label: "Opened but did not click", test: (r: any) => r.open_count > 0 && r.click_count === 0 },
+  unengaged: { label: "Did not click (opened or not)", test: (r: any) => r.click_count === 0 },
+} as const;
+type FollowRule = keyof typeof FOLLOW_UP_RULES;
+
+/** Picks who should get a follow-up: delivered recipients matching the rule, sent at least `days` ago. */
+export function pickFollowUpRecipients(rows: any[], rule: FollowRule, days: number, now = Date.now()) {
+  const cutoff = now - days * 86400000;
+  return rows.filter((r) =>
+    r.sent_at && new Date(r.sent_at).getTime() <= cutoff &&
+    !["bounced", "complained", "unsubscribed", "failed", "pending"].includes(r.status) &&
+    FOLLOW_UP_RULES[rule].test(r));
+}
 
 const db = supabase as any;
 const token = async () => (await supabase.auth.getSession()).data.session?.access_token ?? "";
@@ -64,6 +83,8 @@ export function parseAudience(raw: string) {
 export default function AdminOutreach() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Partial<Campaign> | null>(null);
+  const [preset, setPreset] = useState<AudienceRow[]>([]);
+  const [followFor, setFollowFor] = useState<Campaign | null>(null);
   const [selected, setSelected] = useState<string>("");
 
   const { data: campaigns = [] } = useQuery({
@@ -104,7 +125,7 @@ export default function AdminOutreach() {
           <h1 className="text-2xl font-bold flex items-center gap-2"><Mail className="h-6 w-6 text-primary" /> Email Outreach</h1>
           <p className="text-sm text-muted-foreground">Campaigns send in the cloud — you can close this tab after launching.</p>
         </div>
-        <Button onClick={() => setEditing(blank())}><Plus className="h-4 w-4 mr-1" /> New campaign</Button>
+        <Button onClick={() => { setPreset([]); setEditing(blank()); }}><Plus className="h-4 w-4 mr-1" /> New campaign</Button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -120,7 +141,8 @@ export default function AdminOutreach() {
       </div>
 
       <Tabs defaultValue="campaigns">
-        <TabsList><TabsTrigger value="campaigns">Campaigns</TabsTrigger><TabsTrigger value="recipients">Recipients</TabsTrigger><TabsTrigger value="blocklist">Block list</TabsTrigger></TabsList>
+        <TabsList className="flex-wrap h-auto"><TabsTrigger value="campaigns">Campaigns</TabsTrigger><TabsTrigger value="contacts"><Users className="h-4 w-4 mr-1" />Contacts</TabsTrigger><TabsTrigger value="recipients">Recipients</TabsTrigger><TabsTrigger value="blocklist">Block list</TabsTrigger></TabsList>
+        <TabsContent value="contacts"><OutreachContacts parseAudience={parseAudience} /></TabsContent>
 
         <TabsContent value="campaigns">
           <Card><CardContent className="p-0 overflow-x-auto">
