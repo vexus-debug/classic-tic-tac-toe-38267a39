@@ -15,9 +15,15 @@ interface Recipient {
   clinic_name: string | null; metadata: unknown; unsubscribe_token: string;
 }
 
-function apiKey() {
-  const k = process.env.RESEND_API_KEY;
-  if (!k) throw new Error("Resend API key is not configured");
+// The Resend key is stored only in Supabase Vault (secret name RESEND_API_KEY).
+let cachedKey: string | null = null;
+async function apiKey() {
+  if (cachedKey) return cachedKey;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin.rpc("get_resend_api_key" as never);
+  const k = (data as unknown as string | null) ?? null;
+  if (error || !k) throw new Error("Resend API key not found in Supabase Vault (name it RESEND_API_KEY)");
+  cachedKey = k;
   return k;
 }
 
@@ -52,7 +58,7 @@ function build(c: Campaign, r: Recipient, toOverride?: string) {
 async function resend(path: string, body: unknown) {
   const res = await fetch(`https://api.resend.com${path}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey()}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${await apiKey()}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   const txt = await res.text();

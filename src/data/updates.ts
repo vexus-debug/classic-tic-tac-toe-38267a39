@@ -13,6 +13,15 @@ export interface UpdateEntry {
 
 export const updates: UpdateEntry[] = [
   {
+    version: "v2.1.1",
+    date: "October 27, 2026",
+    title: "Email key kept in your own database",
+    kind: "improvement",
+    items: [
+      { kind: "improvement", text: "Outreach emails now read the Resend key from the clinic's own secure database vault instead of app settings." },
+    ],
+  },
+  {
     version: "v2.1.0",
     date: "October 27, 2026",
     title: "Email Outreach Studio",
